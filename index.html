@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="vi">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style"
+            content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="Bé Ngoan">
+        <title>Bé Ngoan App 2.0</title>
+
+        <!-- Tailwind CSS -->
+        <script src="https://cdn.tailwindcss.com"></script>
+
+        <!-- React & ReactDOM -->
+        <script crossorigin
+            src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+        <script crossorigin
+            src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+        <!-- Lucide Icons (Thay thế SVG inline cho gọn code nếu cần, nhưng ở đây dùng SVG component để đảm bảo chạy offline tốt nhất) -->
+
+        <style>
+        body { 
+            -webkit-tap-highlight-color: transparent; 
+            user-select: none; 
+            touch-action: manipulation;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .active-bounce:active { transform: scale(0.95); transition: transform 0.1s; }
+        
+        /* Hiệu ứng chuyển màu mượt mà */
+        .theme-transition { transition: all 0.3s ease; }
+    </style>
+    </head>
+    <body
+        class="bg-gray-100 h-screen w-screen overflow-hidden flex justify-center">
+
+        <div id="root"
+            class="w-full max-w-md h-full bg-white shadow-2xl relative flex flex-col"></div>
+
+        <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- ICONS ---
+        const IconHeart = ({color}) => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill={color} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>;
+        const IconFrown = ({color}) => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>;
+        const IconTrash = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>;
+        const IconEdit = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>;
+        const IconHome = ({active, color}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? color : "#9CA3AF"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+        const IconHistory = ({active, color}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? color : "#9CA3AF"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+        const IconSettings = ({active, color}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? color : "#9CA3AF"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
+        const IconClose = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+        const IconPlus = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+        const IconUser = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+        const IconCheck = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+        const IconCamera = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>;
+
+        // --- THEMES & CONFIG ---
+        const THEMES = {
+            pink: { id: 'pink', name: 'Hồng Phấn', primary: '#ec4899', bgLight: '#fdf2f8', border: '#fbcfe8', text: '#be185d' },
+            blue: { id: 'blue', name: 'Xanh Dương', primary: '#3b82f6', bgLight: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8' },
+            green: { id: 'green', name: 'Xanh Lá', primary: '#22c55e', bgLight: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
+            orange: { id: 'orange', name: 'Cam Năng Động', primary: '#f97316', bgLight: '#fff7ed', border: '#fed7aa', text: '#c2410c' },
+            purple: { id: 'purple', name: 'Tím Mộng Mơ', primary: '#a855f7', bgLight: '#faf5ff', border: '#e9d5ff', text: '#7e22ce' },
+        };
+
+        const DEFAULT_CATEGORIES = [
+            { id: '1', label: 'Giúp mẹ việc nhà', emoji: '🧹', type: 'reward' },
+            { id: '2', label: 'Ăn hết suất cơm', emoji: '🍚', type: 'reward' },
+            { id: '3', label: 'Tự giác học bài', emoji: '📚', type: 'reward' },
+            { id: '4', label: 'Đi ngủ đúng giờ', emoji: '🛌', type: 'reward' },
+            { id: '5', label: 'Không dọn đồ chơi', emoji: '🧸', type: 'penalty' },
+            { id: '6', label: 'Xem TV quá nhiều', emoji: '📺', type: 'penalty' },
+            { id: '7', label: 'Nhõng nhẽo', emoji: '😭', type: 'penalty' },
+        ];
+
+        // --- UTILS ---
+        const getBase64 = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        };
+
+        function App() {
+            // --- STATE: CHILDREN ---
+            const [children, setChildren] = useState(() => {
+                const saved = localStorage.getItem('bn_children');
+                if (saved) return JSON.parse(saved);
+                // Default child if none exists
+                return [{ id: 'default', name: 'Bé Yêu', avatar: '', theme: 'pink' }];
+            });
+            const [activeChildId, setActiveChildId] = useState(() => {
+                return localStorage.getItem('bn_active_child') || children[0]?.id || 'default';
+            });
+
+            // --- STATE: DATA ---
+            const [transactions, setTransactions] = useState(() => {
+                const saved = localStorage.getItem('bn_transactions');
+                let parsed = saved ? JSON.parse(saved) : [];
+                // Migration: Assign orphan transactions to first child
+                if (parsed.length > 0 && !parsed[0].childId) {
+                    const firstChildId = children[0]?.id || 'default';
+                    parsed = parsed.map(t => ({ ...t, childId: firstChildId }));
+                }
+                return parsed;
+            });
+            
+            const [categories, setCategories] = useState(() => {
+                const saved = localStorage.getItem('bn_categories');
+                return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+            });
+
+            // --- UI STATE ---
+            const [activeTab, setActiveTab] = useState('home');
+            const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+            const [actionType, setActionType] = useState('reward');
+            
+            // Child Modal State
+            const [isChildModalOpen, setIsChildModalOpen] = useState(false);
+            const [editingChild, setEditingChild] = useState(null); // null = creating new
+            
+            // Category Edit State
+            const [editingCategory, setEditingCategory] = useState(null);
+
+            // --- COMPUTED ---
+            const activeChild = useMemo(() => children.find(c => c.id === activeChildId) || children[0], [children, activeChildId]);
+            const theme = THEMES[activeChild.theme] || THEMES.pink;
+
+            const childTransactions = useMemo(() => {
+                const now = new Date();
+                return transactions.filter(t => {
+                    const d = new Date(t.timestamp);
+                    return t.childId === activeChild.id && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                });
+            }, [transactions, activeChild.id]);
+
+            const totalScore = childTransactions.reduce((acc, curr) => acc + curr.value, 0);
+            const rewardCount = childTransactions.filter(t => t.value > 0).length;
+            const penaltyCount = childTransactions.filter(t => t.value < 0).length;
+
+            // --- EFFECTS ---
+            useEffect(() => { localStorage.setItem('bn_transactions', JSON.stringify(transactions)); }, [transactions]);
+            useEffect(() => { localStorage.setItem('bn_categories', JSON.stringify(categories)); }, [categories]);
+            useEffect(() => { localStorage.setItem('bn_children', JSON.stringify(children)); }, [children]);
+            useEffect(() => { localStorage.setItem('bn_active_child', activeChildId); }, [activeChildId]);
+
+            // --- HANDLERS: TRANSACTIONS ---
+            const handleAddTransaction = (category) => {
+                const newTrans = {
+                    id: Date.now().toString(),
+                    childId: activeChild.id,
+                    categoryId: category.id,
+                    timestamp: Date.now(),
+                    value: category.type === 'reward' ? 1 : -1,
+                };
+                setTransactions([newTrans, ...transactions]);
+                setIsActionModalOpen(false);
+            };
+
+            const handleDeleteTransaction = (id) => {
+                if(confirm("Xóa hoạt động này?")) {
+                    setTransactions(transactions.filter(t => t.id !== id));
+                }
+            };
+
+            // --- HANDLERS: CHILDREN ---
+            const handleSaveChild = async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const name = formData.get('name');
+                const themeColor = formData.get('theme');
+                
+                let avatarUrl = editingChild?.avatar || '';
+                
+                // Handle Image Upload
+                const fileInput = e.target.querySelector('input[type="file"]');
+                if (fileInput && fileInput.files[0]) {
+                    try {
+                        avatarUrl = await getBase64(fileInput.files[0]);
+                    } catch (err) {
+                        alert("Lỗi ảnh, vui lòng thử lại ảnh nhỏ hơn.");
+                        return;
+                    }
+                }
+
+                if (!editingChild) {
+                    // Create New
+                    const newChild = {
+                        id: Date.now().toString(),
+                        name: name,
+                        avatar: avatarUrl,
+                        theme: themeColor
+                    };
+                    setChildren([...children, newChild]);
+                    setActiveChildId(newChild.id);
+                } else {
+                    // Update
+                    setChildren(children.map(c => c.id === editingChild.id ? { ...c, name, avatar: avatarUrl, theme: themeColor } : c));
+                }
+                setIsChildModalOpen(false);
+                setEditingChild(null);
+            };
+
+            const handleDeleteChild = (id) => {
+                if (children.length <= 1) return alert("Cần ít nhất một bé!");
+                if (confirm("Bạn chắc chắn muốn xóa hồ sơ này? Toàn bộ điểm sẽ mất.")) {
+                    const newChildren = children.filter(c => c.id !== id);
+                    setChildren(newChildren);
+                    setTransactions(transactions.filter(t => t.childId !== id));
+                    setActiveChildId(newChildren[0].id);
+                    setIsChildModalOpen(false);
+                    setEditingChild(null);
+                }
+            }
+
+            // --- HANDLERS: CATEGORIES ---
+            const handleSaveCategory = (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const label = formData.get('label');
+                const emoji = formData.get('emoji');
+                const type = formData.get('type');
+
+                if (editingCategory?.id) {
+                    // Update
+                    setCategories(categories.map(c => c.id === editingCategory.id ? { ...c, label, emoji, type } : c));
+                } else {
+                    // Create
+                    const newCat = {
+                        id: Date.now().toString(),
+                        label, emoji, type
+                    };
+                    setCategories([...categories, newCat]);
+                }
+                setEditingCategory(null);
+            };
+
+            const handleDeleteCategory = (id) => {
+                if(confirm("Xóa mục này khỏi danh sách?")) {
+                    setCategories(categories.filter(c => c.id !== id));
+                }
+            };
+
+            // --- RENDER HELPERS ---
+            const MainButton = ({ type, onClick }) => {
+                const isReward = type === 'reward';
+                return (
+                    <button 
+                        onClick={onClick}
+                        className={`active-bounce p-5 rounded-2xl flex flex-col items-center shadow-sm border ${isReward ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
+                    >
+                        <div className={`p-3 rounded-full mb-2 shadow-md ${isReward ? 'bg-green-500' : 'bg-red-500'}`}>
+                            {isReward ? <IconHeart color="white" /> : <IconFrown color="white" />}
+                        </div>
+                        <span className={`font-bold ${isReward ? 'text-green-700' : 'text-red-700'}`}>
+                            {isReward ? 'Bé làm tốt!' : 'Cần cố gắng'}
+                        </span>
+                        <span className={`text-xs ${isReward ? 'text-green-600' : 'text-red-600'}`}>
+                            {isReward ? '+1 điểm' : '-1 điểm'}
+                        </span>
+                    </button>
+                );
+            };
+
+            return (
+                <div className="flex flex-col h-full font-sans text-gray-800 theme-transition" style={{backgroundColor: theme.bgLight}}>
+                    
+                    {/* --- HEADER --- */}
+                    <div className="p-4 pt-10 pb-6 rounded-b-3xl shadow-md z-10 flex flex-col items-center shrink-0 theme-transition text-white" style={{backgroundColor: theme.primary}}>
+                        <div 
+                            className="flex items-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full cursor-pointer active:scale-95 transition-transform"
+                            onClick={() => { setEditingChild(null); setIsChildModalOpen(true); }}
+                        >
+                            {activeChild.avatar ? (
+                                <img src={activeChild.avatar} className="w-8 h-8 rounded-full object-cover border-2 border-white" />
+                            ) : (
+                                <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center border-2 border-white text-lg">👶</div>
+                            )}
+                            <span className="font-bold text-lg">{activeChild.name}</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <p className="text-white/80 text-sm mt-2">Tháng {new Date().getMonth() + 1}</p>
+                    </div>
+
+                    {/* --- CONTENT --- */}
+                    <div className="flex-1 overflow-y-auto no-scrollbar pb-24 relative">
+                        
+                        {/* TAB: HOME */}
+                        {activeTab === 'home' && (
+                            <div className="p-6 flex flex-col items-center space-y-6 animate-fade-in">
+                                <div className="relative mt-2">
+                                    <div className="w-48 h-48 rounded-full bg-white flex flex-col items-center justify-center shadow-lg border-4" style={{borderColor: theme.border}}>
+                                        <span className="text-6xl font-bold" style={{color: theme.primary}}>{totalScore}</span>
+                                        <span className="text-gray-400 text-sm font-medium">Điểm tháng này</span>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 w-full">
+                                    <MainButton type="reward" onClick={() => { setActionType('reward'); setIsActionModalOpen(true); }} />
+                                    <MainButton type="penalty" onClick={() => { setActionType('penalty'); setIsActionModalOpen(true); }} />
+                                </div>
+
+                                <div className="flex w-full gap-3">
+                                    <div className="flex-1 bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center">
+                                        <span className="text-xs font-bold text-green-600">Việc tốt</span>
+                                        <span className="font-bold text-lg text-green-600">{rewardCount}</span>
+                                    </div>
+                                    <div className="flex-1 bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center">
+                                        <span className="text-xs font-bold text-red-500">Chưa tốt</span>
+                                        <span className="font-bold text-lg text-red-500">{penaltyCount}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB: HISTORY */}
+                        {activeTab === 'stats' && (
+                            <div className="p-4 space-y-3">
+                                <h2 className="font-bold text-gray-700 ml-1">Lịch sử của {activeChild.name}</h2>
+                                {childTransactions.length === 0 ? (
+                                    <div className="text-center text-gray-400 mt-10">Chưa có dữ liệu</div>
+                                ) : (
+                                    childTransactions.map(t => {
+                                        const cat = categories.find(c => c.id === t.categoryId);
+                                        return (
+                                            <div key={t.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-2xl">{cat?.emoji || '❓'}</span>
+                                                    <div>
+                                                        <p className="font-semibold text-sm">{cat?.label || 'Đã xóa'}</p>
+                                                        <p className="text-xs text-gray-400">{new Date(t.timestamp).toLocaleString('vi-VN')}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`font-bold text-lg ${t.value > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                        {t.value > 0 ? '+1' : '-1'}
+                                                    </span>
+                                                    <button onClick={() => handleDeleteTransaction(t.id)} className="text-gray-300 p-2">
+                                                        <IconTrash />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )
+                                    })
+                                )}
+                            </div>
+                        )}
+
+                        {/* TAB: SETTINGS */}
+                        {activeTab === 'settings' && (
+                            <div className="p-4 space-y-6">
+                                
+                                {/* Child Settings Quick Link */}
+                                <div className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between" style={{borderColor: theme.border}}>
+                                    <div className="flex items-center gap-3">
+                                        {activeChild.avatar ? (
+                                            <img src={activeChild.avatar} className="w-12 h-12 rounded-full object-cover" />
+                                        ) : (
+                                            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-xl">👶</div>
+                                        )}
+                                        <div>
+                                            <p className="font-bold text-gray-800">{activeChild.name}</p>
+                                            <div className="flex items-center gap-1">
+                                                <div className="w-3 h-3 rounded-full" style={{backgroundColor: theme.primary}}></div>
+                                                <p className="text-xs text-gray-500">Màu chủ đạo: {theme.name}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => { setEditingChild(activeChild); setIsChildModalOpen(true); }}
+                                        className="text-sm font-bold px-3 py-1.5 rounded-lg border bg-gray-50 hover:bg-gray-100"
+                                    >
+                                        Sửa
+                                    </button>
+                                </div>
+
+                                {/* Manage Categories */}
+                                <div>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="font-bold text-gray-700 ml-1">Danh sách hoạt động</h3>
+                                        <button 
+                                            onClick={() => setEditingCategory({ label: '', emoji: '🌟', type: 'reward' })}
+                                            className="text-xs font-bold text-white px-3 py-1.5 rounded-lg active:scale-95"
+                                            style={{backgroundColor: theme.primary}}
+                                        >
+                                            + Thêm
+                                        </button>
+                                    </div>
+                                    
+                                    {/* Edit Form Inline */}
+                                    {editingCategory && (
+                                        <form onSubmit={handleSaveCategory} className="bg-gray-50 p-4 rounded-xl border mb-4 animate-fade-in border-gray-200">
+                                            <h4 className="font-bold text-sm text-gray-600 mb-2">
+                                                {editingCategory.id ? 'Sửa hoạt động' : 'Thêm hoạt động mới'}
+                                            </h4>
+                                            <input name="label" required defaultValue={editingCategory.label} placeholder="Tên hoạt động..." className="w-full p-2 rounded-lg border mb-2 text-sm" />
+                                            <div className="flex gap-2">
+                                                <input name="emoji" required defaultValue={editingCategory.emoji} className="w-12 text-center p-2 rounded-lg border text-lg" maxLength="2" />
+                                                <select name="type" defaultValue={editingCategory.type} className="flex-1 p-2 rounded-lg border bg-white text-sm">
+                                                    <option value="reward">Điểm cộng (+)</option>
+                                                    <option value="penalty">Điểm trừ (-)</option>
+                                                </select>
+                                                <div className="flex gap-1">
+                                                    <button type="button" onClick={() => setEditingCategory(null)} className="px-3 rounded-lg border bg-white text-gray-500">Hủy</button>
+                                                    <button type="submit" className="px-3 rounded-lg text-white font-bold" style={{backgroundColor: theme.primary}}>Lưu</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    )}
+
+                                    <div className="space-y-2">
+                                        {categories.map(cat => (
+                                            <div key={cat.id} className="bg-white p-3 rounded-lg border border-gray-100 flex justify-between items-center">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xl">{cat.emoji}</span>
+                                                    <div>
+                                                        <p className="font-medium text-sm">{cat.label}</p>
+                                                        <p className={`text-xs ${cat.type === 'reward' ? 'text-green-500' : 'text-red-500'}`}>
+                                                            {cat.type === 'reward' ? 'Điểm cộng' : 'Điểm trừ'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    <button onClick={() => setEditingCategory(cat)} className="text-gray-400 p-2 hover:text-blue-500">
+                                                        <IconEdit />
+                                                    </button>
+                                                    <button onClick={() => handleDeleteCategory(cat.id)} className="text-gray-400 p-2 hover:text-red-500">
+                                                        <IconTrash />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* --- MODAL: ACTION (ADD POINTS) --- */}
+                    {isActionModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 z-40 flex items-end justify-center backdrop-blur-sm" onClick={() => setIsActionModalOpen(false)}>
+                            <div className="bg-white w-full max-w-md rounded-t-3xl p-6 pb-8 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className={`text-xl font-bold ${actionType === 'reward' ? 'text-green-600' : 'text-red-600'}`}>
+                                        {actionType === 'reward' ? 'Chọn việc tốt' : 'Chọn lỗi vi phạm'}
+                                    </h3>
+                                    <button onClick={() => setIsActionModalOpen(false)} className="bg-gray-100 p-2 rounded-full">
+                                        <IconClose />
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 overflow-y-auto">
+                                    {categories.filter(c => c.type === actionType).map(cat => (
+                                        <button 
+                                            key={cat.id} 
+                                            onClick={() => handleAddTransaction(cat)}
+                                            className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 active-bounce ${
+                                                actionType === 'reward' ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'
+                                            }`}
+                                        >
+                                            <span className="text-3xl">{cat.emoji}</span>
+                                            <span className="text-sm font-medium text-center">{cat.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- MODAL: CHILD MANAGEMENT --- */}
+                    {isChildModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm p-4" onClick={() => { setIsChildModalOpen(false); setEditingChild(null); }}>
+                            <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+                                {!editingChild ? (
+                                    // LIST VIEW (SWITCHER)
+                                    <div>
+                                        <h3 className="text-lg font-bold text-center mb-4">Chọn Bé</h3>
+                                        <div className="grid grid-cols-2 gap-3 mb-4">
+                                            {children.map(child => (
+                                                <button 
+                                                    key={child.id}
+                                                    onClick={() => { setActiveChildId(child.id); setIsChildModalOpen(false); }}
+                                                    className={`p-3 rounded-xl border-2 flex flex-col items-center gap-2 relative ${activeChildId === child.id ? 'border-pink-500 bg-pink-50' : 'border-gray-100'}`}
+                                                >
+                                                    {child.avatar ? (
+                                                        <img src={child.avatar} className="w-12 h-12 rounded-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-xl">👶</div>
+                                                    )}
+                                                    <span className="font-bold text-sm truncate w-full text-center">{child.name}</span>
+                                                    {activeChildId === child.id && <div className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full"></div>}
+                                                </button>
+                                            ))}
+                                            <button 
+                                                onClick={() => setEditingChild({})} 
+                                                className="p-3 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-pink-400 hover:text-pink-500"
+                                            >
+                                                <IconPlus />
+                                                <span className="text-xs font-bold">Thêm Bé</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    // EDIT/CREATE VIEW
+                                    <form onSubmit={handleSaveChild}>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-lg font-bold">{editingChild.id ? 'Sửa thông tin' : 'Thêm bé mới'}</h3>
+                                            {editingChild.id && (
+                                                <button type="button" onClick={() => handleDeleteChild(editingChild.id)} className="text-red-500 text-xs font-bold">Xóa Bé</button>
+                                            )}
+                                        </div>
+                                        
+                                        {/* Avatar Upload */}
+                                        <div className="flex justify-center mb-4">
+                                            <label className="relative cursor-pointer group">
+                                                {editingChild.avatar ? (
+                                                    <img src={editingChild.avatar} className="w-20 h-20 rounded-full object-cover border-4 border-gray-100" />
+                                                ) : (
+                                                    <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center text-3xl border-4 border-gray-50">👶</div>
+                                                )}
+                                                <div className="absolute inset-0 bg-black/20 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <IconCamera />
+                                                </div>
+                                                <input type="file" accept="image/*" className="hidden" />
+                                            </label>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Tên gọi</label>
+                                                <input name="name" required defaultValue={editingChild.name} placeholder="Nhập tên bé..." className="w-full p-3 rounded-xl border bg-gray-50 focus:bg-white focus:ring-2 ring-pink-200 outline-none" />
+                                            </div>
+                                            
+                                            <div>
+                                                <label className="text-xs font-bold text-gray-500 uppercase block mb-2">Màu chủ đạo</label>
+                                                <div className="flex justify-between gap-2">
+                                                    {Object.values(THEMES).map(t => (
+                                                        <label key={t.id} className="cursor-pointer">
+                                                            <input type="radio" name="theme" value={t.id} defaultChecked={(editingChild.theme || 'pink') === t.id} className="peer hidden" />
+                                                            <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-transparent peer-checked:scale-110 peer-checked:border-gray-400 shadow-sm" style={{backgroundColor: t.primary}}>
+                                                                <span className="hidden peer-checked:block text-white"><IconCheck /></span>
+                                                            </div>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3 mt-6">
+                                            <button type="button" onClick={() => setEditingChild(null)} className="flex-1 p-3 rounded-xl bg-gray-100 font-bold text-gray-500">Quay lại</button>
+                                            <button type="submit" className="flex-1 p-3 rounded-xl bg-pink-500 text-white font-bold shadow-lg shadow-pink-200">Lưu</button>
+                                        </div>
+                                    </form>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- BOTTOM NAV --- */}
+                    <div className="bg-white border-t border-gray-100 h-20 pb-4 pt-2 flex justify-around items-center absolute bottom-0 w-full max-w-md rounded-t-2xl shadow-[0_-5px_10px_rgba(0,0,0,0.02)] z-20">
+                        <button onClick={() => setActiveTab('home')} className="flex flex-col items-center w-16 group">
+                            <IconHome active={activeTab === 'home'} color={theme.primary} />
+                            <span className={`text-[10px] mt-1 font-medium group-active:scale-95 transition-transform`} style={{color: activeTab === 'home' ? theme.primary : '#9CA3AF'}}>Trang chủ</span>
+                        </button>
+                        <button onClick={() => setActiveTab('stats')} className="flex flex-col items-center w-16 group">
+                            <IconHistory active={activeTab === 'stats'} color={theme.primary} />
+                            <span className={`text-[10px] mt-1 font-medium group-active:scale-95 transition-transform`} style={{color: activeTab === 'stats' ? theme.primary : '#9CA3AF'}}>Lịch sử</span>
+                        </button>
+                        <button onClick={() => setActiveTab('settings')} className="flex flex-col items-center w-16 group">
+                            <IconSettings active={activeTab === 'settings'} color={theme.primary} />
+                            <span className={`text-[10px] mt-1 font-medium group-active:scale-95 transition-transform`} style={{color: activeTab === 'settings' ? theme.primary : '#9CA3AF'}}>Cài đặt</span>
+                        </button>
+                    </div>
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    </body>
+</html>
